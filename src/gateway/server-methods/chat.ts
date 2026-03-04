@@ -1,4 +1,4 @@
-import fs from "node:fs";
+﻿import fs from "node:fs";
 import path from "node:path";
 import { CURRENT_SESSION_VERSION } from "@mariozechner/pi-coding-agent";
 import { resolveSessionAgentId } from "../../agents/agent-scope.js";
@@ -755,7 +755,7 @@ export const chatHandlers: GatewayRequestHandlers = {
     if (normalizedAttachments.length > 0) {
       try {
         const parsed = await parseMessageWithAttachments(inboundMessage, normalizedAttachments, {
-          maxBytes: 5_000_000,
+          maxBytes: 10_000_000,
           log: context.logGateway,
         });
         parsedMessage = parsed.message;
@@ -859,7 +859,7 @@ export const chatHandlers: GatewayRequestHandlers = {
       const accountId = hasDeliverableRoute ? routeAccountIdCandidate : undefined;
       const messageThreadId = hasDeliverableRoute ? routeThreadIdCandidate : undefined;
       // Inject timestamp so agents know the current date/time.
-      // Only BodyForAgent gets the timestamp — Body stays raw for UI display.
+      // Only BodyForAgent gets the timestamp 鈥?Body stays raw for UI display.
       // See: https://github.com/moltbot/moltbot/issues/3658
       const stampedMessage = injectTimestamp(parsedMessage, timestampOptsFromConfig(cfg));
 
@@ -1099,3 +1099,4 @@ export const chatHandlers: GatewayRequestHandlers = {
     respond(true, { ok: true, messageId: appended.messageId });
   },
 };
+

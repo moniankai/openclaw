@@ -75,6 +75,7 @@ describe("abortChatRunById", () => {
 
     expect(result).toEqual({ aborted: true });
     expect(entry.controller.signal.aborted).toBe(true);
+    expect(entry.controller.signal.reason).toBe("user");
     expect(ops.chatAbortControllers.has(runId)).toBe(false);
     expect(ops.chatRunBuffers.has(runId)).toBe(false);
     expect(ops.chatDeltaSentAt.has(runId)).toBe(false);

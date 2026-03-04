@@ -54,7 +54,19 @@ function isFallbackAbortError(err: unknown): boolean {
     return false;
   }
   const name = "name" in err ? String(err.name) : "";
-  return name === "AbortError";
+  if (name !== "AbortError") {
+    return false;
+  }
+  const reason =
+    ("reason" in err ? (err as { reason?: unknown }).reason : undefined) ??
+    ("cause" in err ? (err as { cause?: unknown }).cause : undefined);
+  const reasonText =
+    typeof reason === "string"
+      ? reason.toLowerCase()
+      : reason instanceof Error
+        ? reason.message.toLowerCase()
+        : "";
+  return reasonText === "stop" || reasonText === "rpc" || reasonText === "user";
 }
 
 function shouldRethrowAbort(err: unknown): boolean {
@@ -452,12 +464,23 @@ export async function runWithModelFallback<T>(params: {
     ? ensureAuthProfileStore(params.agentDir, { allowKeychainPrompt: false })
     : null;
   const attempts: FallbackAttempt[] = [];
+  const blockedProviders = new Map<string, { reason?: FailoverReason; error: string }>();
   let lastError: unknown;
 
   const hasFallbackCandidates = candidates.length > 1;
 
   for (let i = 0; i < candidates.length; i += 1) {
     const candidate = candidates[i];
+    const blocked = blockedProviders.get(candidate.provider);
+    if (blocked) {
+      attempts.push({
+        provider: candidate.provider,
+        model: candidate.model,
+        error: `Provider ${candidate.provider} skipped after prior ${blocked.reason ?? "non-retryable"} failure`,
+        reason: blocked.reason,
+      });
+      continue;
+    }
     if (authStore) {
       const profileIds = resolveAuthProfileOrder({
         cfg: params.cfg,
@@ -538,6 +561,14 @@ export async function runWithModelFallback<T>(params: {
         status: described.status,
         code: described.code,
       });
+      // Billing failures are provider/account scoped. Avoid burning additional
+      // attempts on sibling models from the same provider in this run.
+      if (described.reason === "billing") {
+        blockedProviders.set(candidate.provider, {
+          reason: described.reason,
+          error: described.message,
+        });
+      }
       await params.onError?.({
         provider: candidate.provider,
         model: candidate.model,

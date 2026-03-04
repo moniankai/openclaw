@@ -186,6 +186,7 @@ export function resolveFailoverReasonFromError(err: unknown): FailoverReason | n
       "ECONNRESET",
       "ECONNABORTED",
       "ECONNREFUSED",
+      "ENOTFOUND",
       "ENETUNREACH",
       "EHOSTUNREACH",
       "ENETRESET",

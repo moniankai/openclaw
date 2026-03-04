@@ -1,5 +1,14 @@
 # Repository Guidelines
 
+## Language Preference
+
+- **Default response language: Chinese (简体中文)**
+- Use Chinese for all responses, explanations, and communications unless:
+  - Writing code comments (follow existing codebase style)
+  - Writing commit messages (follow existing convention)
+  - Writing documentation in `docs/` (keep English for international audience)
+  - User explicitly requests English
+
 - Repo: https://github.com/openclaw/openclaw
 - In chat replies, file references must be repo-root relative only (example: `extensions/bluebubbles/src/channel.ts:80`); never absolute paths or `~/...`.
 - GitHub issues/comments/PR comments: use literal multiline strings or `-F - <<'EOF'` (or $'...') for real newlines; never embed "\\n".

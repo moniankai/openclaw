@@ -388,6 +388,50 @@ describe("runWithModelFallback", () => {
     });
   });
 
+  it("skips sibling models on the same provider after a billing failure", async () => {
+    const cfg = makeCfg({
+      agents: {
+        defaults: {
+          model: {
+            primary: "anthropic/claude-opus-4-6",
+            fallbacks: ["anthropic/claude-sonnet-4-6", "bailian/qwen3.5-plus"],
+          },
+        },
+      },
+    });
+
+    const run = vi.fn().mockImplementation(async (provider: string, model: string) => {
+      if (provider === "anthropic" && model === "claude-opus-4-6") {
+        throw Object.assign(new Error("402 daily_limit_reached"), { status: 402 });
+      }
+      if (provider === "bailian" && model === "qwen3.5-plus") {
+        return "ok";
+      }
+      throw new Error(`unexpected fallback candidate: ${provider}/${model}`);
+    });
+
+    const result = await runWithModelFallback({
+      cfg,
+      provider: "anthropic",
+      model: "claude-opus-4-6",
+      run,
+    });
+
+    expect(result.result).toBe("ok");
+    expect(run.mock.calls).toEqual([
+      ["anthropic", "claude-opus-4-6"],
+      ["bailian", "qwen3.5-plus"],
+    ]);
+    expect(
+      result.attempts.some(
+        (attempt) =>
+          attempt.provider === "anthropic" &&
+          attempt.model === "claude-sonnet-4-6" &&
+          attempt.reason === "billing",
+      ),
+    ).toBe(true);
+  });
+
   it("falls back to configured primary for override credential validation errors", async () => {
     const cfg = makeCfg();
     const run = createOverrideFailureRun({
@@ -826,7 +870,9 @@ describe("runWithModelFallback", () => {
     const cfg = makeCfg();
     const run = vi
       .fn()
-      .mockRejectedValueOnce(Object.assign(new Error("aborted"), { name: "AbortError" }))
+      .mockRejectedValueOnce(
+        Object.assign(new Error("aborted"), { name: "AbortError", reason: "stop" }),
+      )
       .mockResolvedValueOnce("ok");
 
     await expect(

@@ -378,6 +378,109 @@ describe("agent event handler", () => {
     nowSpy?.mockRestore();
   });
 
+  it("defers lifecycle error chat finalization and cancels it when run restarts", () => {
+    vi.useFakeTimers();
+    try {
+      const { broadcast, chatRunState, handler } = createHarness();
+      chatRunState.registry.add("run-retry", {
+        sessionKey: "session-retry",
+        clientRunId: "client-retry",
+      });
+
+      handler({
+        runId: "run-retry",
+        seq: 1,
+        stream: "assistant",
+        ts: Date.now(),
+        data: { text: "first attempt output" },
+      });
+      handler({
+        runId: "run-retry",
+        seq: 2,
+        stream: "lifecycle",
+        ts: Date.now(),
+        data: { phase: "error", error: "billing error" },
+      });
+
+      const immediateStates = chatBroadcastCalls(broadcast).map(
+        ([, payload]) => (payload as { state?: string }).state,
+      );
+      expect(immediateStates).not.toContain("error");
+
+      handler({
+        runId: "run-retry",
+        seq: 3,
+        stream: "lifecycle",
+        ts: Date.now(),
+        data: { phase: "start" },
+      });
+      vi.advanceTimersByTime(16_000);
+
+      handler({
+        runId: "run-retry",
+        seq: 4,
+        stream: "assistant",
+        ts: Date.now(),
+        data: { text: "recovered output" },
+      });
+      handler({
+        runId: "run-retry",
+        seq: 5,
+        stream: "lifecycle",
+        ts: Date.now(),
+        data: { phase: "end" },
+      });
+
+      const states = chatBroadcastCalls(broadcast).map(
+        ([, payload]) => (payload as { state?: string }).state,
+      );
+      expect(states).not.toContain("error");
+      expect(states).toContain("final");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("emits lifecycle error to chat only after grace window when no restart occurs", () => {
+    vi.useFakeTimers();
+    try {
+      const { broadcast, chatRunState, handler } = createHarness();
+      chatRunState.registry.add("run-fail", {
+        sessionKey: "session-fail",
+        clientRunId: "client-fail",
+      });
+
+      handler({
+        runId: "run-fail",
+        seq: 1,
+        stream: "assistant",
+        ts: Date.now(),
+        data: { text: "partial output" },
+      });
+      handler({
+        runId: "run-fail",
+        seq: 2,
+        stream: "lifecycle",
+        ts: Date.now(),
+        data: { phase: "error", error: "billing error" },
+      });
+
+      let states = chatBroadcastCalls(broadcast).map(
+        ([, payload]) => (payload as { state?: string }).state,
+      );
+      expect(states).not.toContain("error");
+
+      vi.advanceTimersByTime(16_000);
+
+      states = chatBroadcastCalls(broadcast).map(
+        ([, payload]) => (payload as { state?: string }).state,
+      );
+      expect(states).toContain("error");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("routes tool events only to registered recipients when verbose is enabled", () => {
     const { broadcast, broadcastToConnIds, toolEventRecipients, handler } = createHarness({
       resolveSessionKeyForRun: () => "session-1",

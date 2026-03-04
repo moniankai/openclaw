@@ -736,6 +736,8 @@ export function isModelNotFoundErrorMessage(raw: string): boolean {
     lower.includes("unknown model") ||
     lower.includes("model not found") ||
     lower.includes("model_not_found") ||
+    lower.includes("model_not_supported") ||
+    lower.includes("model not supported") ||
     lower.includes("not_found_error") ||
     (lower.includes("does not exist") && lower.includes("model")) ||
     (lower.includes("invalid model") && !lower.includes("invalid model reference"))

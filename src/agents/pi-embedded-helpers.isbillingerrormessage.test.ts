@@ -140,6 +140,7 @@ describe("isBillingErrorMessage", () => {
   it("still matches real HTTP 402 billing errors", () => {
     const realErrors = [
       "HTTP 402 Payment Required",
+      '402 {"type":"error","error":{"type":"daily_limit_reached","message":"Daily spending limit reached"}}',
       "status: 402",
       "error code 402",
       "http 402",
@@ -493,6 +494,11 @@ describe("classifyFailoverReason", () => {
     ).toBe("rate_limit");
     expect(classifyFailoverReason("invalid request format")).toBe("format");
     expect(classifyFailoverReason("credit balance too low")).toBe("billing");
+    expect(
+      classifyFailoverReason(
+        '402 {"type":"error","error":{"type":"daily_limit_reached","message":"Daily spending limit reached"}}',
+      ),
+    ).toBe("billing");
     expect(classifyFailoverReason("deadline exceeded")).toBe("timeout");
     expect(classifyFailoverReason("request ended without sending any chunks")).toBe("timeout");
     expect(classifyFailoverReason("Connection error.")).toBe("timeout");

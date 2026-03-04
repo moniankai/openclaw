@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+﻿import { randomUUID } from "node:crypto";
 import { listAgentIds } from "../../agents/agent-scope.js";
 import type { AgentInternalEvent } from "../../agents/internal-events.js";
 import { buildBareSessionResetPrompt } from "../../auto-reply/reply/session-reset-prompt.js";
@@ -235,7 +235,7 @@ export const agentHandlers: GatewayRequestHandlers = {
     if (normalizedAttachments.length > 0) {
       try {
         const parsed = await parseMessageWithAttachments(message, normalizedAttachments, {
-          maxBytes: 5_000_000,
+          maxBytes: 10_000_000,
           log: context.logGateway,
         });
         message = parsed.message.trim();
@@ -360,7 +360,7 @@ export const agentHandlers: GatewayRequestHandlers = {
 
     // Inject timestamp into user-authored messages that don't already have one.
     // Channel messages (Discord, Telegram, etc.) get timestamps via envelope
-    // formatting in a separate code path — they never reach this handler.
+    // formatting in a separate code path 鈥?they never reach this handler.
     // See: https://github.com/moltbot/moltbot/issues/3658
     if (!skipTimestampInjection) {
       message = injectTimestamp(message, timestampOptsFromConfig(cfg));
@@ -768,3 +768,4 @@ export const agentHandlers: GatewayRequestHandlers = {
     });
   },
 };
+
